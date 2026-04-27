@@ -4,12 +4,13 @@ interface Subject {
   id: string
   name: string
   icon: string
+  subject: string
 }
 
 const subjectsByTeacher: Record<string, Subject[]> = {
   graw: [
-    { id: "gk", name: "GK", icon: "GK" },
-    { id: "geschichte", name: "Geschichte", icon: "Ge" },
+    { id: "gk", name: "GK", icon: "GK", subject: "gk" },
+    { id: "geschichte", name: "Geschichte", icon: "Ge", subject: "geschichte" },
   ],
   hiss: [
     { id: "deutsch", name: "Deutsch", icon: "De" },
