@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { BingoCard } from "./bingo-card"
 import { GridSizeSelector } from "./grid-size-selector"
 
@@ -26,13 +26,27 @@ function shuffleArray<T>(array: T[]): T[] {
 export function BingoGame({ items }: BingoGameProps) {
   const [gridSize, setGridSize] = useState(4)
   const [shuffleKey, setShuffleKey] = useState(0)
+  const [shuffledItems, setShuffledItems] = useState<BingoItem[]>([])
+  const [isClient, setIsClient] = useState(false)
 
-  const shuffledItems = useMemo(() => {
-    return shuffleArray(items)
+  // Shuffle only on client to avoid hydration mismatch
+  useEffect(() => {
+    setShuffledItems(shuffleArray(items))
+    setIsClient(true)
   }, [items, shuffleKey])
 
   const handleNewGame = () => {
     setShuffleKey(prev => prev + 1)
+  }
+
+  if (!isClient) {
+    return (
+      <div className="flex flex-col items-center gap-8 py-12">
+        <div className="animate-pulse text-muted-foreground">
+          Lade Bingo-Karte...
+        </div>
+      </div>
+    )
   }
 
   if (items.length === 0) {
@@ -47,8 +61,6 @@ export function BingoGame({ items }: BingoGameProps) {
       </div>
     )
   }
-
-  const maxGridSize = Math.floor(Math.sqrt(items.length))
 
   return (
     <div className="flex flex-col items-center gap-8">
