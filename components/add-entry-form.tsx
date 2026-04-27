@@ -14,35 +14,33 @@ interface Subject {
   name: string
 }
 
-const teachers: Teacher[] = [
-  { id: "1", name: "Herr Graw", category: "graw" },
-  { id: "2", name: "Herr Hiss", category: "hiss" },
-  { id: "3", name: "Herr Springer", category: "springer" },
-]
-
 const subjects: Subject[] = [
-  { id: "allgemein", name: "Allgemein" },
+  { id: "allgemein", name: "Allgemein (in jedem Fach)" },
   { id: "gk", name: "GK (Gemeinschaftskunde)" },
   { id: "geschichte", name: "Geschichte" },
   { id: "wirtschaft", name: "Wirtschaft" },
   { id: "politik", name: "Politik" },
+  { id: "deutsch", name: "Deutsch" },
+  { id: "mathe", name: "Mathematik" },
+  { id: "englisch", name: "Englisch" },
 ]
 
 interface AddEntryFormProps {
-  onClose: () => void
-  onSuccess: () => void
+  teachers: Teacher[]
 }
 
-export function AddEntryForm({ onClose, onSuccess }: AddEntryFormProps) {
+export function AddEntryForm({ teachers }: AddEntryFormProps) {
   const [text, setText] = useState("")
   const [selectedTeacher, setSelectedTeacher] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setSuccess(false)
 
     if (!text.trim()) {
       setError("Bitte gib einen Text ein")
@@ -75,51 +73,42 @@ export function AddEntryForm({ onClose, onSuccess }: AddEntryFormProps) {
       return
     }
 
+    // Reset form
+    setText("")
+    setSelectedTeacher("")
+    setSelectedSubject("")
     setLoading(false)
-    onSuccess()
+    setSuccess(true)
+
+    // Hide success message after 3 seconds
+    setTimeout(() => setSuccess(false), 3000)
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-xl shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Neuen Eintrag hinzufügen</h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-accent transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+    <div className="bg-card border border-border rounded-xl p-6">
+      <h2 className="text-xl font-semibold text-foreground mb-4">
+        Neuen Bingo-Eintrag hinzufügen
+      </h2>
+      <p className="text-sm text-muted-foreground mb-6">
+        Hilf mit, das Bingo zu erweitern! Füge typische Sprüche oder Verhaltensweisen der Lehrer hinzu.
+      </p>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="text" className="text-sm font-medium text-foreground">
+            Bingo-Text
+          </label>
+          <input
+            id="text"
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="z.B. 'sagt Vorsicht!' oder 'unterbricht Julia'"
+            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="text" className="text-sm font-medium text-foreground">
-              Bingo-Text
-            </label>
-            <input
-              id="text"
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="z.B. 'sagt Vorsicht!'"
-              className="px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="teacher" className="text-sm font-medium text-foreground">
               Lehrer
@@ -156,33 +145,33 @@ export function AddEntryForm({ onClose, onSuccess }: AddEntryFormProps) {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground">
-              Tipp: Wähle &quot;Allgemein&quot; für Dinge, die der Lehrer in jedem Fach macht.
-            </p>
           </div>
+        </div>
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+        <p className="text-xs text-muted-foreground">
+          Tipp: Wähle &quot;Allgemein&quot; für Dinge, die der Lehrer in jedem Fach macht. Diese erscheinen dann immer im Bingo.
+        </p>
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Speichern..." : "Hinzufügen"}
-            </button>
+        {error && (
+          <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
+            {error}
           </div>
-        </form>
-      </div>
+        )}
+
+        {success && (
+          <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-sm">
+            Eintrag erfolgreich hinzugefügt!
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full sm:w-auto self-end px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {loading ? "Speichern..." : "Hinzufügen"}
+        </button>
+      </form>
     </div>
   )
 }
