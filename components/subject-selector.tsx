@@ -6,10 +6,19 @@ interface Subject {
   icon: string
 }
 
-const subjects: Subject[] = [
-  { id: "gk", name: "GK", icon: "GK" },
-  { id: "geschichte", name: "Geschichte", icon: "Ge" },
-]
+const subjectsByTeacher: Record<string, Subject[]> = {
+  graw: [
+    { id: "gk", name: "GK", icon: "GK" },
+    { id: "geschichte", name: "Geschichte", icon: "Ge" },
+  ],
+  hiss: [
+    { id: "deutsch", name: "Deutsch", icon: "De" },
+  ],
+  springer: [
+    { id: "physik", name: "Physik", icon: "Ph" },
+    { id: "kunst", name: "Kunst", icon: "Ku" },
+  ],
+}
 
 interface SubjectSelectorProps {
   teacherCategory: string
@@ -18,7 +27,8 @@ interface SubjectSelectorProps {
   onBack: () => void
 }
 
-export function SubjectSelector({ teacherName, onSelect }: SubjectSelectorProps) {
+export function SubjectSelector({ teacherCategory, teacherName, onSelect }: SubjectSelectorProps) {
+  const subjects = subjectsByTeacher[teacherCategory] || []
   return (
     <div className="flex flex-col items-center gap-8">
       <div className="text-center">
