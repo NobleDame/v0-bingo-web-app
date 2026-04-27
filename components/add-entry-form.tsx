@@ -14,16 +14,22 @@ interface Subject {
   name: string
 }
 
-const subjects: Subject[] = [
-  { id: "allgemein", name: "Allgemein (in jedem Fach)" },
-  { id: "gk", name: "GK (Gemeinschaftskunde)" },
-  { id: "geschichte", name: "Geschichte" },
-  { id: "wirtschaft", name: "Wirtschaft" },
-  { id: "politik", name: "Politik" },
-  { id: "deutsch", name: "Deutsch" },
-  { id: "mathe", name: "Mathematik" },
-  { id: "englisch", name: "Englisch" },
-]
+const subjectsByTeacher: Record<string, Subject[]> = {
+  graw: [
+    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
+    { id: "gk", name: "GK (Gemeinschaftskunde)" },
+    { id: "geschichte", name: "Geschichte" },
+  ],
+  hiss: [
+    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
+    { id: "deutsch", name: "Deutsch" },
+  ],
+  springer: [
+    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
+    { id: "physik", name: "Physik" },
+    { id: "kunst", name: "Kunst" },
+  ],
+}
 
 interface AddEntryFormProps {
   teachers: Teacher[]
@@ -33,6 +39,9 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
   const [text, setText] = useState("")
   const [selectedTeacher, setSelectedTeacher] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("")
+  
+  // Get subjects for selected teacher
+  const availableSubjects = selectedTeacher ? (subjectsByTeacher[selectedTeacher] || []) : []
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -116,7 +125,10 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             <select
               id="teacher"
               value={selectedTeacher}
-              onChange={(e) => setSelectedTeacher(e.target.value)}
+              onChange={(e) => {
+                setSelectedTeacher(e.target.value)
+                setSelectedSubject("") // Reset subject when teacher changes
+              }}
               className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Lehrer auswählen...</option>
@@ -136,10 +148,11 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
               id="subject"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={!selectedTeacher}
+              className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             >
-              <option value="">Fach auswählen...</option>
-              {subjects.map((subject) => (
+              <option value="">{selectedTeacher ? "Fach auswählen..." : "Erst Lehrer wählen..."}</option>
+              {availableSubjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name}
                 </option>
