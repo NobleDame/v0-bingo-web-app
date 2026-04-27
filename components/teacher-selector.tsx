@@ -12,11 +12,18 @@ const teachers: Teacher[] = [
   { id: "springer", name: "Herr Springer", category: "springer" },
 ]
 
-interface TeacherSelectorProps {
-  onSelect: (category: string) => void
+const subjectsByTeacher: Record<string, string[]> = {
+  graw: ["GK", "Geschichte"],
+  hiss: ["Deutsch"],
+  springer: ["Physik", "Kunst"],
 }
 
-export function TeacherSelector({ onSelect }: TeacherSelectorProps) {
+interface TeacherSelectorProps {
+  teachers: Teacher[]
+  onSelect: (teacher: Teacher) => void
+}
+
+export function TeacherSelector({ teachers, onSelect }: TeacherSelectorProps) {
   return (
     <div className="flex flex-col items-center gap-8">
       <div className="text-center">
@@ -32,7 +39,7 @@ export function TeacherSelector({ onSelect }: TeacherSelectorProps) {
         {teachers.map((teacher) => (
           <button
             key={teacher.id}
-            onClick={() => onSelect(teacher.category)}
+            onClick={() => onSelect(teacher)}
             className="group relative px-6 py-8 rounded-xl border-2 border-border bg-card hover:border-primary hover:bg-accent transition-all duration-200"
           >
             <div className="flex flex-col items-center gap-3">
@@ -42,6 +49,16 @@ export function TeacherSelector({ onSelect }: TeacherSelectorProps) {
               <span className="text-lg font-medium text-foreground">
                 {teacher.name}
               </span>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {(subjectsByTeacher[teacher.category] || []).map((subject) => (
+                  <span
+                    key={subject}
+                    className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium group-hover:bg-primary/10 group-hover:text-primary transition-colors"
+                  >
+                    {subject}
+                  </span>
+                ))}
+              </div>
             </div>
           </button>
         ))}
