@@ -9,11 +9,6 @@ interface Subject {
 const subjects: Subject[] = [
   { id: "gk", name: "GK", icon: "GK" },
   { id: "geschichte", name: "Geschichte", icon: "Ge" },
-  { id: "wirtschaft", name: "Wirtschaft", icon: "Wi" },
-  { id: "politik", name: "Politik", icon: "Po" },
-  { id: "deutsch", name: "Deutsch", icon: "De" },
-  { id: "mathe", name: "Mathematik", icon: "Ma" },
-  { id: "englisch", name: "Englisch", icon: "En" },
 ]
 
 interface SubjectSelectorProps {
