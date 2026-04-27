@@ -1,0 +1,51 @@
+"use client"
+
+interface Teacher {
+  id: string
+  name: string
+  category: string
+}
+
+const teachers: Teacher[] = [
+  { id: "graw", name: "Herr Graw", category: "graw" },
+  { id: "hiss", name: "Herr Hiss", category: "hiss" },
+  { id: "springer", name: "Herr Springer", category: "springer" },
+]
+
+interface TeacherSelectorProps {
+  onSelect: (category: string) => void
+}
+
+export function TeacherSelector({ onSelect }: TeacherSelectorProps) {
+  return (
+    <div className="flex flex-col items-center gap-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold text-foreground mb-2">
+          Wähle einen Lehrer
+        </h2>
+        <p className="text-muted-foreground">
+          Für welchen Lehrer möchtest du Bingo spielen?
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
+        {teachers.map((teacher) => (
+          <button
+            key={teacher.id}
+            onClick={() => onSelect(teacher.category)}
+            className="group relative px-6 py-8 rounded-xl border-2 border-border bg-card hover:border-primary hover:bg-accent transition-all duration-200"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                {teacher.name.split(" ")[1]?.[0] || "?"}
+              </div>
+              <span className="text-lg font-medium text-foreground">
+                {teacher.name}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}

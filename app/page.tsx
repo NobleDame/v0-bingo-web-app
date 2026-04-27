@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { BingoGame } from "@/components/bingo-game"
+import { BingoApp } from "@/components/bingo-app"
 
 export default async function Home() {
   const supabase = await createClient()
@@ -32,14 +32,14 @@ export default async function Home() {
       <div className="container mx-auto px-4 py-8">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            Bingo
+            Lehrer Bingo
           </h1>
           <p className="text-muted-foreground">
-            Wähle die Feldgröße und spiele Bingo!
+            Wähle einen Lehrer und spiele Bingo!
           </p>
         </header>
 
-        <BingoGame items={items || []} />
+        <BingoApp items={items || []} />
       </div>
     </main>
   )

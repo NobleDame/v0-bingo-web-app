@@ -49,19 +49,6 @@ export function BingoGame({ items }: BingoGameProps) {
     )
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">
-          Keine Bingo-Einträge in der Datenbank gefunden.
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Füge zuerst Einträge zur Tabelle &quot;bingo_items&quot; hinzu.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col items-center gap-8">
       <GridSizeSelector
