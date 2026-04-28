@@ -30,9 +30,6 @@ export function TeacherSelector({ teachers, onSelect }: TeacherSelectorProps) {
         <h2 className="text-2xl font-semibold text-foreground mb-2">
           Wähle einen Lehrer
         </h2>
-        <p className="text-muted-foreground">
-          Für welchen Lehrer möchtest du Bingo spielen?
-        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">

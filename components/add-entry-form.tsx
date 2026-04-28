@@ -98,9 +98,6 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
       <h2 className="text-xl font-semibold text-foreground mb-4">
         Neuen Bingo-Eintrag hinzufügen
       </h2>
-      <p className="text-sm text-muted-foreground mb-6">
-        Hilf mit, das Bingo zu erweitern! Füge typische Sprüche oder Verhaltensweisen der Lehrer hinzu.
-      </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -162,7 +159,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Tipp: Wähle &quot;Allgemein&quot; für Dinge, die der Lehrer in jedem Fach macht. Diese erscheinen dann immer im Bingo.
+          wähle bei Fächern &quot;allgemein, damit der Eintrag unabhängig vom Fach des Lehrers angezeigt wird.
         </p>
 
         {error && (

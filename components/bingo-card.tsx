@@ -12,9 +12,10 @@ interface BingoItem {
 interface BingoCardProps {
   items: BingoItem[]
   gridSize: number
+  winMode?: "line" | "full"
 }
 
-export function BingoCard({ items, gridSize }: BingoCardProps) {
+export function BingoCard({ items, gridSize, winMode = "line" }: BingoCardProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [hasBingo, setHasBingo] = useState(false)
 
@@ -28,9 +29,14 @@ export function BingoCard({ items, gridSize }: BingoCardProps) {
     setSelected(newSelected)
   }
 
+  const totalCells = gridSize * gridSize
+
   // Check for bingo
   useEffect(() => {
-    if (checkBingo(selected, gridSize)) {
+    const won = winMode === "full"
+      ? selected.size === totalCells
+      : checkBingo(selected, gridSize)
+    if (won) {
       if (!hasBingo) {
         setHasBingo(true)
         confetti({
@@ -42,7 +48,7 @@ export function BingoCard({ items, gridSize }: BingoCardProps) {
     } else {
       setHasBingo(false)
     }
-  }, [selected, gridSize, hasBingo])
+  }, [selected, gridSize, hasBingo, winMode, totalCells])
 
   const resetGame = () => {
     setSelected(new Set())
