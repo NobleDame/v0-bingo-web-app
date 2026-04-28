@@ -159,7 +159,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Tipp: Wähle &quot;Allgemein&quot; für Dinge, die der Lehrer in jedem Fach macht. Diese erscheinen dann immer im Bingo.
+          wähle bei Fächern &quot;allgemein, damit der Eintrag unabhängig vom Fach des Lehrers angezeigt wird.
         </p>
 
         {error && (
