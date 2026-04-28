@@ -20,7 +20,7 @@ const subjectsByTeacher: Record<string, Subject[]> = {
   ],
   wolff: [
     { id: "bio", name: "Bio", icon: "Bio" },
-  ]
+  ],
 }
 
 interface SubjectSelectorProps {
