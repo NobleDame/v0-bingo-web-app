@@ -19,17 +19,18 @@ export default function RegelnPage() {
         <div className="flex flex-col gap-8">
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Spielablauf</h2>
+            /* incase of error with 'shrink-0' use 'flex-shrink-0' */
             <ol className="flex flex-col gap-3 text-muted-foreground">
               <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">1</span>
+                <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">1</span>
                 <span className="leading-relaxed">Wähle einen Lehrer aus der Liste aus.</span>
               </li>
               <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">2</span>
+                <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">2</span>
                 <span className="leading-relaxed">Wähle ein Fach für das Bingo</span>
               </li>
               <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
+                <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
                 <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.
                   (größere Felder sind nur bei genug Einträgen möglich)
                 </span>
