@@ -29,6 +29,10 @@ const subjectsByTeacher: Record<string, Subject[]> = {
     { id: "physik", name: "Physik" },
     { id: "kunst", name: "Kunst" },
   ],
+  wolff: [
+    { id: "allgemein", name: "Allgemein" },
+    { id: "bio", name: "Bio" },
+  ],
 }
 
 interface AddEntryFormProps {

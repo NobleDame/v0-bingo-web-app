@@ -24,6 +24,7 @@ const teachers: Teacher[] = [
   { id: "1", name: "Herr Graw", category: "graw" },
   { id: "2", name: "Herr Hiss", category: "hiss" },
   { id: "3", name: "Herr Springer", category: "springer" },
+  { id: "4", name: "Frau Dr Wolff", category: "wolff" },
 ]
 
 type Step = "home" | "teacher" | "subject" | "game"
@@ -50,7 +51,7 @@ export function BingoApp() {
     setStep("game")
 
     const supabase = createClient()
-    
+
     // Load both "allgemein" entries AND subject-specific entries for the selected teacher
     const { data, error } = await supabase
       .from("bingo_items")
@@ -135,7 +136,7 @@ export function BingoApp() {
           </svg>
           Zurück
         </button>
-        <SubjectSelector 
+        <SubjectSelector
           teacherCategory={selectedTeacher!.category}
           teacherName={selectedTeacher!.name}
           onSelect={handleSubjectSelect}
