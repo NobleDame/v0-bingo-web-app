@@ -67,9 +67,7 @@ export default function RegelnPage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Einträge hinzufügen</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Auf der Startseite kannst du eigene Beobachtungen als neue Bingo-Felder einreichen.
-              Wähle dazu einen Lehrer, das passende Fach und beschreibe das Ereignis kurz. Dein Eintrag
-              erscheint sofort in der Datenbank und kann beim nächsten Spiel auf der Karte auftauchen.
+              Auf der Startseite können eigene Einträge hinzugefügt werden und sind nach dem Neuladen der Seite verfügbar.
             </p>
           </section>
 
