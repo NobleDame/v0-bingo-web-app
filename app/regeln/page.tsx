@@ -39,11 +39,9 @@ export default function RegelnPage() {
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
-                <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">4</span>
-                <span className="leading-relaxed">Größere Felder sind nur bei genug Einträgen möglich. Bei der Spielweise gibt es klassisches Bingo &lpar;horizontal, vertikal, diagonal&rpar; & die Bedingung alle Felder auszufüllen</span>
+                <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.
+                  &lpar; größere Felder sind nur bei genug Einträgen möglich&rpar;
+                </span>
               </li>
             </ol>
           </section>
