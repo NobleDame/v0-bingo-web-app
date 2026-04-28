@@ -10,6 +10,7 @@ const teachers: Teacher[] = [
   { id: "graw", name: "Herr Graw", category: "graw" },
   { id: "hiss", name: "Herr Hiss", category: "hiss" },
   { id: "springer", name: "Herr Springer", category: "springer" },
+  { id: "wolff", name: "Frau Dr Wolff", category: "wolff" }
 ]
 
 const subjectsByTeacher: Record<string, string[]> = {
