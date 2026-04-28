@@ -38,9 +38,6 @@ export function SubjectSelector({ teacherCategory, teacherName, onSelect }: Subj
         <p className="text-muted-foreground">
           {teacherName} - In welchem Fach möchtest du Bingo spielen?
         </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          (Die allgemeinen Einträge werden immer mit geladen)
-        </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-3xl">
