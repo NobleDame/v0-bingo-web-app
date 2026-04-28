@@ -35,19 +35,13 @@ export default function RegelnPage() {
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">2</span>
-                <span className="leading-relaxed">Wähle das Fach, in dem du gerade Unterricht hast. Die Bingo-Karte zeigt dann allgemeine Felder für diesen Lehrer sowie fachspezifische Einträge.</span>
+                <span className="leading-relaxed">Wähle ein Fach für das Bingo</span>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
-                <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">4</span>
-                <span className="leading-relaxed">Sobald etwas passiert, das auf deiner Karte steht, tippe auf das Feld um es zu markieren.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">5</span>
-                <span className="leading-relaxed">Bei BINGO gewinnt das Spiel &ndash; feiere lautlos.</span>
+                <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.
+                  (größere Felder sind nur bei genug Einträgen möglich)
+                </span>
               </li>
             </ol>
           </section>
@@ -58,15 +52,13 @@ export default function RegelnPage() {
               <div className="rounded-lg border border-border bg-card p-4">
                 <p className="font-medium text-foreground mb-1">Linie</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Eine vollständige Reihe, Spalte oder Diagonale ergibt BINGO. Dies ist die klassische
-                  und schnellere Variante.
+                  Gewinne durch eine horizontale, vertikale oder diagonale Reihe im Bingo.
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-card p-4">
                 <p className="font-medium text-foreground mb-1">Voll</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Alle Felder auf der Karte müssen markiert werden. Diese Variante dauert länger und
-                  eignet sich besonders für lange Unterrichtsstunden.
+                  Alle Felder auf der Karte müssen markiert werden.
                 </p>
               </div>
             </div>
@@ -75,17 +67,14 @@ export default function RegelnPage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Einträge hinzufügen</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Auf der Startseite kannst du eigene Beobachtungen als neue Bingo-Felder einreichen.
-              Wähle dazu einen Lehrer, das passende Fach und beschreibe das Ereignis kurz. Dein Eintrag
-              erscheint sofort in der Datenbank und kann beim nächsten Spiel auf der Karte auftauchen.
+              Auf der Startseite können eigene Einträge hinzugefügt werden und sind nach dem Neuladen der Seite verfügbar.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Fairplay</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Bitte keine beleidigenden oder verletzenden Einträge hinzufügen. Das Spiel soll Spass machen
-              und respektvoll bleiben.
+              einfach respektvolle Einträge machen und fertig. Gesunder Menschenverstand :)
             </p>
           </section>
         </div>
