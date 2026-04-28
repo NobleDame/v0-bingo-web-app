@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { BingoCard } from "./bingo-card"
-import { GridSizeSelector } from "./grid-size-selector"
 
 interface BingoItem {
   id: string
@@ -60,8 +59,10 @@ export function BingoGame({ items }: BingoGameProps) {
     )
   }
 
+  const availableGridOptions = [3, 4, 5, 6].filter(s => s * s <= items.length)
+
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="flex flex-col items-center gap-6">
       {/* Shuffle warning dialog */}
       {showShuffleWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -88,45 +89,59 @@ export function BingoGame({ items }: BingoGameProps) {
         </div>
       )}
 
-      <GridSizeSelector
-        value={gridSize}
-        onChange={setGridSize}
-        maxSize={items.length}
-      />
+      {/* Compact controls bar */}
+      <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-border bg-card p-2">
+        {/* Grid size buttons */}
+        {availableGridOptions.map((size) => (
+          <button
+            key={size}
+            onClick={() => setGridSize(size)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              gridSize === size
+                ? "bg-primary text-primary-foreground shadow"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {size}x{size}
+          </button>
+        ))}
 
-      {/* Win mode toggle */}
-      <div className="flex flex-col items-center gap-2">
-        <span className="text-sm font-medium text-foreground">Gewinnbedingung</span>
-        <div className="flex rounded-lg border border-border overflow-hidden text-sm">
-          <button
-            onClick={() => setWinMode("line")}
-            className={`px-4 py-2 transition-colors ${
-              winMode === "line"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            Reihe / Spalte / Diagonale
-          </button>
-          <button
-            onClick={() => setWinMode("full")}
-            className={`px-4 py-2 transition-colors border-l border-border ${
-              winMode === "full"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            Alle Felder
-          </button>
-        </div>
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Win mode toggle */}
+        <button
+          onClick={() => setWinMode("line")}
+          title="Reihe / Spalte / Diagonale"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            winMode === "line"
+              ? "bg-primary text-primary-foreground shadow"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          Linie
+        </button>
+        <button
+          onClick={() => setWinMode("full")}
+          title="Alle Felder markieren"
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            winMode === "full"
+              ? "bg-primary text-primary-foreground shadow"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          Voll
+        </button>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Shuffle button */}
+        <button
+          onClick={handleShuffleClick}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-muted text-foreground hover:bg-muted/70 transition-colors"
+        >
+          Mischen
+        </button>
       </div>
-
-      <button
-        onClick={handleShuffleClick}
-        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Karten mischen
-      </button>
 
       <BingoCard
         key={shuffleKey}
