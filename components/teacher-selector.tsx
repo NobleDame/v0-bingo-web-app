@@ -17,6 +17,7 @@ const subjectsByTeacher: Record<string, string[]> = {
   graw: ["GK", "Geschichte"],
   hiss: ["Deutsch"],
   springer: ["Physik", "Kunst"],
+  wolff: ["Bio"]
 }
 
 interface TeacherSelectorProps {
