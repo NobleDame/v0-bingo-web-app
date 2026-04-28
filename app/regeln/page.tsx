@@ -74,8 +74,7 @@ export default function RegelnPage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Fairplay</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Bitte keine beleidigenden oder verletzenden Einträge hinzufügen. Das Spiel soll Spass machen
-              und respektvoll bleiben.
+              einfach respektvolle Einträge machen und fertig. Gesunder Menschenverstand :)
             </p>
           </section>
         </div>
