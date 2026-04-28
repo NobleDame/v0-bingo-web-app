@@ -40,7 +40,7 @@ export default function RegelnPage() {
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
                 <span className="leading-relaxed">Wähle die Kartengröße (3x3 bis 6x6) und die Spielweise.
-                  &lpar; größere Felder sind nur bei genug Einträgen möglich&rpar;
+                  (größere Felder sind nur bei genug Einträgen möglich)
                 </span>
               </li>
             </ol>
