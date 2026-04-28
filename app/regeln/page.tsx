@@ -52,15 +52,13 @@ export default function RegelnPage() {
               <div className="rounded-lg border border-border bg-card p-4">
                 <p className="font-medium text-foreground mb-1">Linie</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Eine vollständige Reihe, Spalte oder Diagonale ergibt BINGO. Dies ist die klassische
-                  und schnellere Variante.
+                  Gewinne durch eine horizontale, vertikale oder diagonale Reihe im Bingo.
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-card p-4">
                 <p className="font-medium text-foreground mb-1">Voll</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Alle Felder auf der Karte müssen markiert werden. Diese Variante dauert länger und
-                  eignet sich besonders für lange Unterrichtsstunden.
+                  Alle Felder auf der Karte müssen markiert werden.
                 </p>
               </div>
             </div>
