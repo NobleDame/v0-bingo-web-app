@@ -39,7 +39,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
   const [text, setText] = useState("")
   const [selectedTeacher, setSelectedTeacher] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("")
-  
+
   // Get subjects for selected teacher
   const availableSubjects = selectedTeacher ? (subjectsByTeacher[selectedTeacher] || []) : []
   const [loading, setLoading] = useState(false)
@@ -112,7 +112,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="z.B. 'sagt Vorsicht!' oder 'unterbricht Julia'"
+            placeholder="obv nichts beleidigendes oder so"
             className="px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
