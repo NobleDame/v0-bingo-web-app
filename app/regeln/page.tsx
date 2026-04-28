@@ -73,8 +73,8 @@ export default function RegelnPage() {
 
       <footer className="border-t border-border py-5 text-center text-xs text-muted-foreground">
         Lehrer-Bingo &mdash;{" "}
-        <Link href="/page" className="underline underline-offset-2 hover:text-foreground transition-colors">
-          Startseite
+        <Link href="/regeln" className="underline underline-offset-2 hover:text-foreground transition-colors">
+          Spielregeln
         </Link>
       </footer>
     </main>
