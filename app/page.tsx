@@ -8,9 +8,6 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Lehrer Bingo
           </h1>
-          <p className="text-muted-foreground">
-            Wähle einen Lehrer und spiele Bingo!
-          </p>
         </header>
 
         <BingoApp />
