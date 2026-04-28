@@ -18,15 +18,6 @@ export default function RegelnPage() {
 
         <div className="flex flex-col gap-8">
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Ziel des Spiels</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Beobachte deinen Lehrer im Unterricht und markiere alle Felder auf deiner Bingo-Karte,
-              die du erkennst. Je nach Spielweise gewinnst du, wenn du eine vollständige Reihe,
-              Spalte oder Diagonale hast &ndash; oder wenn alle Felder markiert sind.
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Spielablauf</h2>
             <ol className="flex flex-col gap-3 text-muted-foreground">
               <li className="flex gap-3">
