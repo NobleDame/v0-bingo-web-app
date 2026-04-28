@@ -35,7 +35,7 @@ export default function RegelnPage() {
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">2</span>
-                <span className="leading-relaxed">Wähle das Fach, in dem du gerade Unterricht hast. Die Bingo-Karte zeigt dann allgemeine Felder für diesen Lehrer sowie fachspezifische Einträge.</span>
+                <span className="leading-relaxed">Wähle einen Lehrer und ein Fach für das Bingo</span>
               </li>
               <li className="flex gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">3</span>
