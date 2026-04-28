@@ -18,6 +18,9 @@ const subjectsByTeacher: Record<string, Subject[]> = {
     { id: "physik", name: "Physik", icon: "Ph" },
     { id: "kunst", name: "Kunst", icon: "Ku" },
   ],
+  wolff: [
+    { id: "bio", name: "Bio", icon: "Bio" },
+  ]
 }
 
 interface SubjectSelectorProps {
