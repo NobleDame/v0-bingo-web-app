@@ -36,7 +36,7 @@ export function SubjectSelector({ teacherCategory, teacherName, onSelect }: Subj
           Wähle ein Fach
         </h2>
         <p className="text-muted-foreground">
-          {teacherName} - In welchem Fach möchtest du Bingo spielen?
+          {teacherName}
         </p>
       </div>
 
