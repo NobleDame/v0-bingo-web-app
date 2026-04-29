@@ -6,6 +6,7 @@ import { PLAYER_COLORS } from "./multiplayer-lobby"
 import type { Session } from "./multiplayer-lobby"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
+import { getCompletedLines } from "./bingo-card"
 
 interface BingoItem {
   id: string
@@ -49,28 +50,13 @@ function shuffleWithSeed(array: BingoItem[], seed: string): BingoItem[] {
   return shuffled
 }
 
-function getCompletedLines(selected: Set<number>, gridSize: number): number[][] {
-  const lines: number[][] = []
-  for (let row = 0; row < gridSize; row++) {
-    const cells = Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
-    if (cells.every(c => selected.has(c))) lines.push(cells)
-  }
-  for (let col = 0; col < gridSize; col++) {
-    const cells = Array.from({ length: gridSize }, (_, row) => row * gridSize + col)
-    if (cells.every(c => selected.has(c))) lines.push(cells)
-  }
-  const diag1 = Array.from({ length: gridSize }, (_, i) => i * gridSize + i)
-  if (diag1.every(c => selected.has(c))) lines.push(diag1)
-  const diag2 = Array.from({ length: gridSize }, (_, i) => i * gridSize + (gridSize - 1 - i))
-  if (diag2.every(c => selected.has(c))) lines.push(diag2)
-  return lines
-}
 
 export function MultiplayerGame({ session, playerId, playerName, playerColor, items, onBack }: MultiplayerGameProps) {
   const [players, setPlayers] = useState<Player[]>([])
   const [myMarked, setMyMarked] = useState<Set<number>>(new Set())
   const [myBingoCount, setMyBingoCount] = useState(0)
   const [isGameOver, setIsGameOver] = useState(false)
+  const [winnerName, setWinnerName] = useState<string | null>(null)
   const [showCode, setShowCode] = useState(true)
   // Which player's card to display (null = own card)
   const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null)
@@ -121,6 +107,15 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
     return () => { supabase.removeChannel(channel) }
   }, [session.id, playerId, gridSize])
 
+  // Called by BingoCard when the local player hits the win condition
+  const handleMyGameOver = useCallback(async () => {
+    setIsGameOver(true)
+    setWinnerName(playerName)
+    // Write a winner flag to DB so other players get notified via realtime
+    const supabase = createClient()
+    await supabase.from("players").update({ is_winner: true }).eq("id", playerId)
+  }, [playerId, playerName])
+
   const toggleCell = useCallback(async (index: number) => {
     if (isGameOver) return
 
@@ -133,8 +128,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
       let newBingoCount = myBingoCount
 
       if (winMode === "full") {
-        if (next.size === totalCells && !isGameOver) {
-          setIsGameOver(true)
+        if (next.size === totalCells) {
           newBingoCount += 1
           confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
         }
@@ -146,10 +140,6 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
           confetti({ particleCount: 100 + gained * 50, spread: 70, origin: { y: 0.6 } })
         }
         prevCompletedLinesRef.current = completedLines.length
-        if (next.size === totalCells && !isGameOver) {
-          setIsGameOver(true)
-          confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
-        }
       }
 
       setMyBingoCount(newBingoCount)

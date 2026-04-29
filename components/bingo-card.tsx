@@ -13,70 +13,77 @@ interface BingoCardProps {
   items: BingoItem[]
   gridSize: number
   winMode?: "line" | "full"
+  /** Called once when the game-ending condition is first met */
+  onGameOver?: () => void
+  /** External game-over flag (e.g. another multiplayer player already won) */
+  externalGameOver?: boolean
 }
 
-function getCompletedLines(selected: Set<number>, gridSize: number): number[][] {
+export function getCompletedLines(selected: Set<number>, gridSize: number): number[][] {
   const lines: number[][] = []
-
-  // Rows
   for (let row = 0; row < gridSize; row++) {
     const cells = Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
     if (cells.every(c => selected.has(c))) lines.push(cells)
   }
-  // Columns
   for (let col = 0; col < gridSize; col++) {
     const cells = Array.from({ length: gridSize }, (_, row) => row * gridSize + col)
     if (cells.every(c => selected.has(c))) lines.push(cells)
   }
-  // Diagonal top-left → bottom-right
   const diag1 = Array.from({ length: gridSize }, (_, i) => i * gridSize + i)
   if (diag1.every(c => selected.has(c))) lines.push(diag1)
-  // Diagonal top-right → bottom-left
   const diag2 = Array.from({ length: gridSize }, (_, i) => i * gridSize + (gridSize - 1 - i))
   if (diag2.every(c => selected.has(c))) lines.push(diag2)
-
   return lines
 }
 
-export function BingoCard({ items, gridSize, winMode = "line" }: BingoCardProps) {
+export function BingoCard({ items, gridSize, winMode = "line", onGameOver, externalGameOver = false }: BingoCardProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bingoCount, setBingoCount] = useState(0)
   const [isGameOver, setIsGameOver] = useState(false)
   const prevCompletedRef = useRef<number>(0)
+  const gameOverFiredRef = useRef(false)
 
   const totalCells = gridSize * gridSize
 
+  // Trigger game-over from external source (another player won in multiplayer)
   useEffect(() => {
+    if (externalGameOver && !isGameOver) {
+      setIsGameOver(true)
+    }
+  }, [externalGameOver, isGameOver])
+
+  useEffect(() => {
+    if (isGameOver) return
+
     if (winMode === "full") {
       if (selected.size === totalCells) {
-        if (!isGameOver) {
-          setIsGameOver(true)
-          setBingoCount(prev => prev + 1)
-          confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } })
-        }
+        setIsGameOver(true)
+        setBingoCount(prev => prev + 1)
+        confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
+        if (!gameOverFiredRef.current) { gameOverFiredRef.current = true; onGameOver?.() }
       }
     } else {
       const completedLines = getCompletedLines(selected, gridSize)
       const newCount = completedLines.length
+      const gained = newCount - prevCompletedRef.current
 
-      if (newCount > prevCompletedRef.current) {
-        // New bingo(s) achieved
-        const gained = newCount - prevCompletedRef.current
+      if (gained > 0) {
         setBingoCount(prev => prev + gained)
         confetti({ particleCount: 100 + gained * 50, spread: 70, origin: { y: 0.6 } })
+
+        // In line-mode: first bingo ends the game
+        if (!gameOverFiredRef.current) {
+          gameOverFiredRef.current = true
+          setIsGameOver(true)
+          onGameOver?.()
+        }
       }
       prevCompletedRef.current = newCount
-
-      // Game over only when all cells are filled
-      if (selected.size === totalCells && !isGameOver) {
-        setIsGameOver(true)
-        confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
-      }
     }
-  }, [selected, gridSize, totalCells, winMode, isGameOver])
+  }, [selected, gridSize, totalCells, winMode, isGameOver, onGameOver])
 
   const toggleCell = (index: number) => {
-    if (isGameOver) return
+    if (isGameOver || externalGameOver) return
     setSelected(prev => {
       const next = new Set(prev)
       if (next.has(index)) next.delete(index)
@@ -90,6 +97,7 @@ export function BingoCard({ items, gridSize, winMode = "line" }: BingoCardProps)
     setBingoCount(0)
     setIsGameOver(false)
     prevCompletedRef.current = 0
+    gameOverFiredRef.current = false
   }
 
   const completedCells = winMode === "line"
@@ -107,7 +115,7 @@ export function BingoCard({ items, gridSize, winMode = "line" }: BingoCardProps)
         )}
         {isGameOver && (
           <div className="text-lg font-bold text-foreground animate-bounce">
-            Karte voll!
+            {externalGameOver ? "Spiel vorbei!" : winMode === "line" ? "BINGO! Spiel vorbei!" : "Karte voll!"}
           </div>
         )}
       </div>
