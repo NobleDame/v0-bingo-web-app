@@ -2,38 +2,7 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-
-interface Teacher {
-  id: string
-  name: string
-  category: string
-}
-
-interface Subject {
-  id: string
-  name: string
-}
-
-const subjectsByTeacher: Record<string, Subject[]> = {
-  graw: [
-    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
-    { id: "gk", name: "GK (Gemeinschaftskunde)" },
-    { id: "geschichte", name: "Geschichte" },
-  ],
-  hiss: [
-    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
-    { id: "deutsch", name: "Deutsch" },
-  ],
-  springer: [
-    { id: "allgemein", name: "Allgemein (in jedem Fach)" },
-    { id: "physik", name: "Physik" },
-    { id: "kunst", name: "Kunst" },
-  ],
-  wolff: [
-    { id: "allgemein", name: "Allgemein" },
-    { id: "bio", name: "Bio" },
-  ],
-}
+import type { Teacher } from "./teacher-selector"
 
 interface AddEntryFormProps {
   teachers: Teacher[]
@@ -41,59 +10,45 @@ interface AddEntryFormProps {
 
 export function AddEntryForm({ teachers }: AddEntryFormProps) {
   const [text, setText] = useState("")
-  const [selectedTeacher, setSelectedTeacher] = useState("")
-  const [selectedSubject, setSelectedSubject] = useState("")
-
-  // Get subjects for selected teacher
-  const availableSubjects = selectedTeacher ? (subjectsByTeacher[selectedTeacher] || []) : []
+  const [selectedTeacherId, setSelectedTeacherId] = useState("")
+  const [selectedSubjectSlug, setSelectedSubjectSlug] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+
+  const selectedTeacher = teachers.find((t) => t.id === selectedTeacherId) ?? null
+  const availableSubjects = selectedTeacher
+    ? [{ id: "allgemein", name: "Allgemein (in jedem Fach)", slug: "allgemein" }, ...selectedTeacher.subjects]
+    : []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setSuccess(false)
 
-    if (!text.trim()) {
-      setError("Bitte gib einen Text ein")
-      return
-    }
-    if (!selectedTeacher) {
-      setError("Bitte wähle einen Lehrer")
-      return
-    }
-    if (!selectedSubject) {
-      setError("Bitte wähle ein Fach")
-      return
-    }
+    if (!text.trim()) { setError("Bitte gib einen Text ein"); return }
+    if (!selectedTeacher) { setError("Bitte wähle einen Lehrer"); return }
+    if (!selectedSubjectSlug) { setError("Bitte wähle ein Fach"); return }
 
     setLoading(true)
-
     const supabase = createClient()
-    const { error: insertError } = await supabase
-      .from("bingo_items")
-      .insert({
-        text: text.trim(),
-        category: selectedTeacher,
-        subject: selectedSubject,
-      })
+    const { error: insertError } = await supabase.from("bingo_items").insert({
+      text: text.trim(),
+      category: selectedTeacher.category,
+      subject: selectedSubjectSlug,
+    })
 
     if (insertError) {
-      console.error("Error inserting item:", insertError)
       setError("Fehler beim Speichern. Bitte versuche es erneut.")
       setLoading(false)
       return
     }
 
-    // Reset form
     setText("")
-    setSelectedTeacher("")
-    setSelectedSubject("")
+    setSelectedTeacherId("")
+    setSelectedSubjectSlug("")
     setLoading(false)
     setSuccess(true)
-
-    // Hide success message after 3 seconds
     setTimeout(() => setSuccess(false), 3000)
   }
 
@@ -113,7 +68,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="obv nichts beleidigendes oder so"
+            placeholder="Was sagst/tut der Lehrer typischerweise?"
             className="px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -125,16 +80,13 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             </label>
             <select
               id="teacher"
-              value={selectedTeacher}
-              onChange={(e) => {
-                setSelectedTeacher(e.target.value)
-                setSelectedSubject("") // Reset subject when teacher changes
-              }}
+              value={selectedTeacherId}
+              onChange={(e) => { setSelectedTeacherId(e.target.value); setSelectedSubjectSlug("") }}
               className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Lehrer auswählen...</option>
               {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.category}>
+                <option key={teacher.id} value={teacher.id}>
                   {teacher.name}
                 </option>
               ))}
@@ -147,14 +99,14 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             </label>
             <select
               id="subject"
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
+              value={selectedSubjectSlug}
+              onChange={(e) => setSelectedSubjectSlug(e.target.value)}
               disabled={!selectedTeacher}
               className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             >
               <option value="">{selectedTeacher ? "Fach auswählen..." : "Erst Lehrer wählen..."}</option>
               {availableSubjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
+                <option key={subject.id} value={subject.slug}>
                   {subject.name}
                 </option>
               ))}
@@ -163,7 +115,7 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          wähle bei Fächern &quot;allgemein, damit der Eintrag unabhängig vom Fach des Lehrers angezeigt wird.
+          Wähle &quot;Allgemein&quot;, damit der Eintrag bei jedem Fach dieses Lehrers erscheint.
         </p>
 
         {error && (
@@ -171,7 +123,6 @@ export function AddEntryForm({ teachers }: AddEntryFormProps) {
             {error}
           </div>
         )}
-
         {success && (
           <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-sm">
             Eintrag erfolgreich hinzugefügt!
