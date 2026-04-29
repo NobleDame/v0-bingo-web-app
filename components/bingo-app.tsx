@@ -102,16 +102,14 @@ export function BingoApp() {
   }
 
   const handleMultiplayerJoin = async (session: Session, playerId: string, name: string, color: string) => {
-    // If joining (not creating), load items from session data
-    if (items.length === 0) {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from("bingo_items")
-        .select("*")
-        .eq("category", session.teacher_category)
-        .in("subject", ["allgemein", session.subject_slug])
-      setItems(data ?? [])
-    }
+    // Always load items fresh from session data
+    const supabase = createClient()
+    const { data } = await supabase
+      .from("bingo_items")
+      .select("*")
+      .eq("category", session.teacher_category)
+      .in("subject", ["allgemein", session.subject_slug])
+    setItems(data ?? [])
     setMultiSession(session)
     setMultiPlayerId(playerId)
     setMultiPlayerName(name)
@@ -136,18 +134,6 @@ export function BingoApp() {
       <MultiplayerLobby
         onJoin={handleMultiplayerJoin}
         onBack={handleBackToHome}
-        prefilledSession={
-          selectedTeacher && selectedSubject
-            ? {
-                teacher_category: selectedTeacher.category,
-                teacher_name: selectedTeacher.name,
-                subject_slug: selectedSubject.slug,
-                subject_name: selectedSubject.name,
-                win_mode: "line",
-                grid_size: 4,
-              }
-            : null
-        }
       />
     )
   }

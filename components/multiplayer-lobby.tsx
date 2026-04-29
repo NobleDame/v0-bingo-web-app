@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 
-const PLAYER_COLORS = [
+export const PLAYER_COLORS = [
   { id: "red",    label: "Rot",     hex: "#ef4444" },
   { id: "blue",   label: "Blau",    hex: "#3b82f6" },
   { id: "green",  label: "Grün",    hex: "#22c55e" },
@@ -14,7 +14,7 @@ const PLAYER_COLORS = [
   { id: "yellow", label: "Gelb",    hex: "#eab308" },
 ]
 
-interface Session {
+export interface Session {
   id: string
   code: string
   teacher_category: string
@@ -25,11 +25,16 @@ interface Session {
   grid_size: number
 }
 
+interface Teacher {
+  id: string
+  name: string
+  category: string
+  subjects: { id: string; name: string; slug: string }[]
+}
+
 interface MultiplayerLobbyProps {
   onJoin: (session: Session, playerId: string, playerName: string, playerColor: string) => void
   onBack: () => void
-  // Pre-filled when coming from a game setup
-  prefilledSession?: Omit<Session, "id" | "code"> | null
 }
 
 function generateCode(): string {
@@ -39,7 +44,7 @@ function generateCode(): string {
   return code
 }
 
-export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: MultiplayerLobbyProps) {
+export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose")
   const [playerName, setPlayerName] = useState("")
   const [selectedColor, setSelectedColor] = useState(PLAYER_COLORS[0].id)
@@ -47,31 +52,64 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // For create: teacher/subject selection
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [loadingTeachers, setLoadingTeachers] = useState(false)
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
+  const [selectedSubjectSlug, setSelectedSubjectSlug] = useState("")
+  const [gridSize, setGridSize] = useState(4)
+  const [winMode, setWinMode] = useState<"line" | "full">("line")
+
+  useEffect(() => {
+    if (mode === "create") {
+      setLoadingTeachers(true)
+      const supabase = createClient()
+      supabase
+        .from("teachers")
+        .select("id, name, category, subjects(id, name, slug)")
+        .order("name")
+        .then(({ data }) => {
+          setTeachers((data ?? []) as Teacher[])
+          setLoadingTeachers(false)
+        })
+    }
+  }, [mode])
+
+  const selectedSubject = selectedTeacher?.subjects.find(s => s.slug === selectedSubjectSlug)
+
   const handleCreate = async () => {
     if (!playerName.trim()) { setError("Bitte gib einen Spielernamen ein."); return }
-    if (!prefilledSession) { setError("Kein Spiel konfiguriert."); return }
+    if (!selectedTeacher) { setError("Bitte wähle einen Lehrer aus."); return }
+    if (!selectedSubjectSlug) { setError("Bitte wähle ein Fach aus."); return }
+
     setLoading(true)
     setError("")
     const supabase = createClient()
 
+    // Generate unique code
     let code = generateCode()
-    // Ensure uniqueness
-    let attempts = 0
-    while (attempts < 5) {
-      const { data } = await supabase.from("game_sessions").select("id").eq("code", code).single()
+    for (let attempts = 0; attempts < 5; attempts++) {
+      const { data } = await supabase.from("game_sessions").select("id").eq("code", code).maybeSingle()
       if (!data) break
       code = generateCode()
-      attempts++
     }
 
     const { data: session, error: sessionErr } = await supabase
       .from("game_sessions")
-      .insert({ code, ...prefilledSession })
+      .insert({
+        code,
+        teacher_category: selectedTeacher.category,
+        teacher_name: selectedTeacher.name,
+        subject_slug: selectedSubjectSlug,
+        subject_name: selectedSubject?.name ?? selectedSubjectSlug,
+        win_mode: winMode,
+        grid_size: gridSize,
+      })
       .select()
       .single()
 
     if (sessionErr || !session) {
-      setError("Fehler beim Erstellen des Spiels.")
+      setError("Fehler beim Erstellen des Spiels: " + (sessionErr?.message ?? "Unbekannter Fehler"))
       setLoading(false)
       return
     }
@@ -83,7 +121,7 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
       .single()
 
     if (playerErr || !player) {
-      setError("Fehler beim Erstellen des Spielers.")
+      setError("Fehler beim Erstellen des Spielers: " + (playerErr?.message ?? ""))
       setLoading(false)
       return
     }
@@ -106,7 +144,7 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
       .single()
 
     if (sessionErr || !session) {
-      setError("Spielcode nicht gefunden. Bitte prüfe den Code.")
+      setError("Spielcode nicht gefunden.")
       setLoading(false)
       return
     }
@@ -118,7 +156,7 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
       .single()
 
     if (playerErr || !player) {
-      setError("Fehler beim Beitreten.")
+      setError("Fehler beim Beitreten: " + (playerErr?.message ?? ""))
       setLoading(false)
       return
     }
@@ -129,6 +167,7 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
 
   const colorHex = PLAYER_COLORS.find(c => c.id === selectedColor)?.hex ?? "#3b82f6"
 
+  // Mode: choose
   if (mode === "choose") {
     return (
       <div className="flex flex-col items-center gap-8 py-4">
@@ -157,6 +196,7 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
     )
   }
 
+  // Shared form (name + color + mode-specific fields)
   return (
     <div className="flex flex-col gap-6 max-w-sm mx-auto w-full">
       <button
@@ -193,11 +233,10 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
               key={c.id}
               onClick={() => setSelectedColor(c.id)}
               title={c.label}
-              className="w-9 h-9 rounded-full border-4 transition-all"
+              className="w-9 h-9 rounded-full transition-all"
               style={{
                 backgroundColor: c.hex,
-                borderColor: selectedColor === c.id ? c.hex : "transparent",
-                outline: selectedColor === c.id ? `3px solid ${c.hex}` : "none",
+                outline: selectedColor === c.id ? `3px solid ${c.hex}` : "2px solid transparent",
                 outlineOffset: "2px",
               }}
             />
@@ -208,7 +247,86 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
         </p>
       </div>
 
-      {/* Join code input */}
+      {/* CREATE: teacher + subject + settings */}
+      {mode === "create" && (
+        <>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">Lehrer</label>
+            {loadingTeachers ? (
+              <div className="text-sm text-muted-foreground animate-pulse">Lade Lehrer...</div>
+            ) : (
+              <select
+                value={selectedTeacher?.id ?? ""}
+                onChange={e => {
+                  const t = teachers.find(t => t.id === e.target.value) ?? null
+                  setSelectedTeacher(t)
+                  setSelectedSubjectSlug("")
+                }}
+                className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Lehrer wählen...</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">Fach</label>
+            <select
+              value={selectedSubjectSlug}
+              onChange={e => setSelectedSubjectSlug(e.target.value)}
+              disabled={!selectedTeacher}
+              className="px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            >
+              <option value="">{selectedTeacher ? "Fach wählen..." : "Erst Lehrer wählen..."}</option>
+              {selectedTeacher?.subjects.map(s => (
+                <option key={s.id} value={s.slug}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">Feldgröße</label>
+            <div className="flex gap-2">
+              {[3, 4, 5].map(size => (
+                <button
+                  key={size}
+                  onClick={() => setGridSize(size)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    gridSize === size
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {size}x{size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">Spielweise</label>
+            <div className="flex rounded-lg border border-border overflow-hidden text-sm">
+              <button
+                onClick={() => setWinMode("line")}
+                className={`flex-1 py-2 transition-colors ${winMode === "line" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              >
+                Linie
+              </button>
+              <button
+                onClick={() => setWinMode("full")}
+                className={`flex-1 py-2 border-l border-border transition-colors ${winMode === "full" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              >
+                Alle Felder
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* JOIN: code input */}
       {mode === "join" && (
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-foreground">Spielcode</label>
@@ -237,6 +355,3 @@ export function MultiplayerLobby({ onJoin, onBack, prefilledSession }: Multiplay
     </div>
   )
 }
-
-export { PLAYER_COLORS }
-export type { Session }
