@@ -4,14 +4,26 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 export const PLAYER_COLORS = [
-  { id: "red",    label: "Rot",     hex: "#ef4444" },
-  { id: "blue",   label: "Blau",    hex: "#3b82f6" },
-  { id: "green",  label: "Grün",    hex: "#22c55e" },
-  { id: "orange", label: "Orange",  hex: "#f97316" },
-  { id: "purple", label: "Lila",    hex: "#a855f7" },
-  { id: "pink",   label: "Pink",    hex: "#ec4899" },
-  { id: "teal",   label: "Türkis",  hex: "#14b8a6" },
-  { id: "yellow", label: "Gelb",    hex: "#eab308" },
+  { id: "red",       label: "Rot",        hex: "#ef4444" },
+  { id: "orange",    label: "Orange",     hex: "#f97316" },
+  { id: "amber",     label: "Amber",      hex: "#f59e0b" },
+  { id: "yellow",    label: "Gelb",       hex: "#eab308" },
+  { id: "lime",      label: "Limette",    hex: "#84cc16" },
+  { id: "green",     label: "Grün",       hex: "#22c55e" },
+  { id: "emerald",   label: "Smaragd",    hex: "#10b981" },
+  { id: "teal",      label: "Türkis",     hex: "#14b8a6" },
+  { id: "cyan",      label: "Cyan",       hex: "#06b6d4" },
+  { id: "sky",       label: "Himmelblau", hex: "#0ea5e9" },
+  { id: "blue",      label: "Blau",       hex: "#3b82f6" },
+  { id: "indigo",    label: "Indigo",     hex: "#6366f1" },
+  { id: "violet",    label: "Violett",    hex: "#8b5cf6" },
+  { id: "purple",    label: "Lila",       hex: "#a855f7" },
+  { id: "fuchsia",   label: "Fuchsia",    hex: "#d946ef" },
+  { id: "pink",      label: "Pink",       hex: "#ec4899" },
+  { id: "rose",      label: "Rose",       hex: "#f43f5e" },
+  { id: "brown",     label: "Braun",      hex: "#92400e" },
+  { id: "slate",     label: "Schiefergrau", hex: "#475569" },
+  { id: "custom",    label: "Eigene Farbe", hex: "#000000" },
 ]
 
 export interface Session {
@@ -48,6 +60,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose")
   const [playerName, setPlayerName] = useState("")
   const [selectedColor, setSelectedColor] = useState(PLAYER_COLORS[0].id)
+  const [customHex, setCustomHex] = useState("#ff6600")
   const [joinCode, setJoinCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -116,7 +129,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
 
     const { data: player, error: playerErr } = await supabase
       .from("players")
-      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor, game_code: code })
+      .insert({ session_id: session.id, name: playerName.trim(), color: colorValue, game_code: code })
       .select()
       .single()
 
@@ -126,7 +139,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
       return
     }
 
-    onJoin(session, player.id, playerName.trim(), selectedColor)
+    onJoin(session, player.id, playerName.trim(), colorValue)
     setLoading(false)
   }
 
@@ -151,7 +164,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
 
     const { data: player, error: playerErr } = await supabase
       .from("players")
-      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor, game_code: session.code })
+      .insert({ session_id: session.id, name: playerName.trim(), color: colorValue, game_code: session.code })
       .select()
       .single()
 
@@ -161,11 +174,16 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
       return
     }
 
-    onJoin(session, player.id, playerName.trim(), selectedColor)
+    onJoin(session, player.id, playerName.trim(), colorValue)
     setLoading(false)
   }
 
-  const colorHex = PLAYER_COLORS.find(c => c.id === selectedColor)?.hex ?? "#3b82f6"
+  const colorHex = selectedColor === "custom"
+    ? customHex
+    : PLAYER_COLORS.find(c => c.id === selectedColor)?.hex ?? "#3b82f6"
+
+  // The value stored in DB: for custom, store the hex directly as the color id
+  const colorValue = selectedColor === "custom" ? customHex : selectedColor
 
   // Mode: choose
   if (mode === "choose") {
@@ -228,12 +246,12 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-foreground">Deine Spielerfarbe</label>
         <div className="flex flex-wrap gap-2">
-          {PLAYER_COLORS.map(c => (
+          {PLAYER_COLORS.filter(c => c.id !== "custom").map(c => (
             <button
               key={c.id}
               onClick={() => setSelectedColor(c.id)}
               title={c.label}
-              className="w-9 h-9 rounded-full transition-all"
+              className="w-8 h-8 rounded-full transition-all hover:scale-110"
               style={{
                 backgroundColor: c.hex,
                 outline: selectedColor === c.id ? `3px solid ${c.hex}` : "2px solid transparent",
@@ -242,8 +260,42 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
             />
           ))}
         </div>
+        {/* Custom hex input */}
+        <div className="flex items-center gap-2 mt-1">
+          <div
+            className="w-8 h-8 rounded-full border-2 border-border flex-shrink-0 cursor-pointer hover:scale-110 transition-all"
+            style={{
+              backgroundColor: customHex,
+              outline: selectedColor === "custom" ? `3px solid ${customHex}` : "2px solid transparent",
+              outlineOffset: "2px",
+            }}
+            onClick={() => setSelectedColor("custom")}
+            title="Eigene Farbe"
+          />
+          <input
+            type="text"
+            value={selectedColor === "custom" ? customHex : ""}
+            onChange={e => {
+              setSelectedColor("custom")
+              const val = e.target.value
+              setCustomHex(val.startsWith("#") ? val : "#" + val)
+            }}
+            placeholder="Hex eingeben, z.B. #ff6600"
+            maxLength={7}
+            className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <input
+            type="color"
+            value={selectedColor === "custom" ? customHex : colorHex}
+            onChange={e => { setSelectedColor("custom"); setCustomHex(e.target.value) }}
+            className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent p-0.5"
+            title="Farbe wählen"
+          />
+        </div>
         <p className="text-xs text-muted-foreground">
-          Gewählt: <span className="font-medium" style={{ color: colorHex }}>{PLAYER_COLORS.find(c => c.id === selectedColor)?.label}</span>
+          Gewählt: <span className="font-semibold" style={{ color: colorHex }}>
+            {selectedColor === "custom" ? customHex : PLAYER_COLORS.find(c => c.id === selectedColor)?.label}
+          </span>
         </p>
       </div>
 

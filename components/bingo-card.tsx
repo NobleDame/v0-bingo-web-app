@@ -63,19 +63,20 @@ export function BingoCard({
     if (externalGameOver && !isGameOver) setIsGameOver(true)
   }, [externalGameOver, isGameOver])
 
-  // Win-condition check (only for local interactive card)
+  // Win-condition check — runs on activeSelected so it works both in singleplayer (local state)
+  // and multiplayer read-only views (externalMarked). Skipped for pure read-only spectator cards.
   useEffect(() => {
-    if (readOnly || externalMarked || isGameOver) return
+    if (readOnly || isGameOver) return
 
     if (winMode === "full") {
-      if (selected.size === totalCells) {
+      if (activeSelected.size === totalCells) {
         setIsGameOver(true)
         setBingoCount(prev => prev + 1)
         confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
         if (!gameOverFiredRef.current) { gameOverFiredRef.current = true; onGameOver?.() }
       }
     } else {
-      const completedLines = getCompletedLines(selected, gridSize)
+      const completedLines = getCompletedLines(activeSelected, gridSize)
       const newCount = completedLines.length
       const gained = newCount - prevCompletedRef.current
       if (gained > 0) {
@@ -89,12 +90,13 @@ export function BingoCard({
       }
       prevCompletedRef.current = newCount
     }
-  }, [selected, gridSize, totalCells, winMode, isGameOver, onGameOver, readOnly, externalMarked])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSelected, gridSize, totalCells, winMode, isGameOver, onGameOver, readOnly])
 
   const handleToggle = (index: number) => {
     if (readOnly || isGameOver || externalGameOver) return
     if (onCellToggle) {
-      // Multiplayer: let parent handle DB + state
+      // Multiplayer: parent manages state + DB, BingoCard tracks via externalMarked
       onCellToggle(index)
     } else {
       setSelected(prev => {

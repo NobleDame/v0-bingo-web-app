@@ -6,7 +6,7 @@ import { PLAYER_COLORS } from "./multiplayer-lobby"
 import type { Session } from "./multiplayer-lobby"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
-import { BingoCard } from "./bingo-card"
+import { BingoCard, getCompletedLines } from "./bingo-card"
 
 interface BingoItem {
   id: string
@@ -68,7 +68,14 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
 
   // Each player gets their own shuffled card (session code + player id as seed)
   const myItems = shuffleWithSeed(items, session.code + playerId).slice(0, totalCells)
-  const colorHex = PLAYER_COLORS.find(c => c.id === playerColor)?.hex ?? "#3b82f6"
+  // playerColor is either a known color id (e.g. "blue") or a raw hex value (custom color)
+  const colorHex = playerColor.startsWith("#")
+    ? playerColor
+    : PLAYER_COLORS.find(c => c.id === playerColor)?.hex ?? "#3b82f6"
+
+  // Resolve hex for any player color (id or raw hex)
+  const resolveHex = (color: string) =>
+    color.startsWith("#") ? color : PLAYER_COLORS.find(c => c.id === color)?.hex ?? "#888"
 
   // Load initial players + subscribe to realtime
   useEffect(() => {
@@ -123,7 +130,10 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
     await supabase.from("players").update({ is_winner: true }).eq("id", playerId)
   }, [playerId, playerName])
 
-  const toggleCell = useCallback(async (index: number) => {
+  const myBingoCountRef = useRef(0)
+  myBingoCountRef.current = myBingoCount
+
+  const toggleCell = useCallback((index: number) => {
     if (isGameOver) return
 
     setMyMarked(prev => {
@@ -132,7 +142,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
       else next.add(index)
 
       const markedArray = Array.from(next)
-      let newBingoCount = myBingoCount
+      let newBingoCount = myBingoCountRef.current
 
       if (winMode === "full") {
         if (next.size === totalCells) {
@@ -149,6 +159,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         prevCompletedLinesRef.current = completedLines.length
       }
 
+      myBingoCountRef.current = newBingoCount
       setMyBingoCount(newBingoCount)
 
       // Persist to DB
@@ -162,7 +173,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
 
       return next
     })
-  }, [isGameOver, myBingoCount, gridSize, winMode, totalCells, playerId])
+  }, [isGameOver, gridSize, winMode, totalCells, playerId])
 
   const otherPlayers = players.filter(p => p.id !== playerId)
   const viewingPlayer = viewingPlayerId ? players.find(p => p.id === viewingPlayerId) : null
@@ -219,8 +230,8 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
 
         {/* Other players' card buttons */}
         {otherPlayers.map(p => {
-          const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
-          const isViewing = viewingPlayerId === p.id
+          const hex = resolveHex(p.color)
+              const isViewing = viewingPlayerId === p.id
           return (
             <button
               key={p.id}
@@ -272,7 +283,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
           items={shuffleWithSeed(items, session.code + viewingPlayer.id).slice(0, totalCells)}
           gridSize={gridSize}
           winMode={winMode}
-          playerColor={PLAYER_COLORS.find(c => c.id === viewingPlayer.color)?.hex}
+          playerColor={resolveHex(viewingPlayer.color)}
           externalMarked={new Set<number>(viewingPlayer.marked_cells)}
           readOnly
           externalGameOver={isGameOver}
@@ -284,6 +295,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
           winMode={winMode}
           playerColor={colorHex}
           onCellToggle={toggleCell}
+          externalMarked={myMarked}
           onGameOver={handleMyGameOver}
           externalGameOver={isGameOver && winnerName !== playerName}
         />
@@ -297,7 +309,7 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
             {[...players]
               .sort((a, b) => b.bingo_count - a.bingo_count || b.total_cells_marked - a.total_cells_marked)
               .map(p => {
-                const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
+                const hex = resolveHex(p.color)
                 const isMe = p.id === playerId
                 const count = isMe ? myBingoCount : p.bingo_count
                 const marked = isMe ? myMarked.size : (Array.isArray(p.marked_cells) ? p.marked_cells : []).length
