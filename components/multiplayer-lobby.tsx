@@ -116,7 +116,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
 
     const { data: player, error: playerErr } = await supabase
       .from("players")
-      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor })
+      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor, game_code: code })
       .select()
       .single()
 
@@ -151,7 +151,7 @@ export function MultiplayerLobby({ onJoin, onBack }: MultiplayerLobbyProps) {
 
     const { data: player, error: playerErr } = await supabase
       .from("players")
-      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor })
+      .insert({ session_id: session.id, name: playerName.trim(), color: selectedColor, game_code: session.code })
       .select()
       .single()
 

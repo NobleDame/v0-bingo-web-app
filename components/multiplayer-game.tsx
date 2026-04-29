@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { PLAYER_COLORS } from "./multiplayer-lobby"
 import type { Session } from "./multiplayer-lobby"
@@ -32,8 +32,8 @@ interface MultiplayerGameProps {
   onBack: () => void
 }
 
+// Deterministic shuffle: seed = session code + player id → each player gets own unique card
 function shuffleWithSeed(array: BingoItem[], seed: string): BingoItem[] {
-  // Deterministic shuffle based on session code so all players see same layout
   const shuffled = [...array]
   let hash = 0
   for (let i = 0; i < seed.length; i++) {
@@ -49,41 +49,57 @@ function shuffleWithSeed(array: BingoItem[], seed: string): BingoItem[] {
   return shuffled
 }
 
-function checkBingo(selected: Set<number>, gridSize: number): boolean {
+function getCompletedLines(selected: Set<number>, gridSize: number): number[][] {
+  const lines: number[][] = []
   for (let row = 0; row < gridSize; row++) {
-    if ([...Array(gridSize)].every((_, col) => selected.has(row * gridSize + col))) return true
+    const cells = Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
+    if (cells.every(c => selected.has(c))) lines.push(cells)
   }
   for (let col = 0; col < gridSize; col++) {
-    if ([...Array(gridSize)].every((_, row) => selected.has(row * gridSize + col))) return true
+    const cells = Array.from({ length: gridSize }, (_, row) => row * gridSize + col)
+    if (cells.every(c => selected.has(c))) lines.push(cells)
   }
-  if ([...Array(gridSize)].every((_, i) => selected.has(i * gridSize + i))) return true
-  if ([...Array(gridSize)].every((_, i) => selected.has(i * gridSize + (gridSize - 1 - i)))) return true
-  return false
+  const diag1 = Array.from({ length: gridSize }, (_, i) => i * gridSize + i)
+  if (diag1.every(c => selected.has(c))) lines.push(diag1)
+  const diag2 = Array.from({ length: gridSize }, (_, i) => i * gridSize + (gridSize - 1 - i))
+  if (diag2.every(c => selected.has(c))) lines.push(diag2)
+  return lines
 }
 
 export function MultiplayerGame({ session, playerId, playerName, playerColor, items, onBack }: MultiplayerGameProps) {
   const [players, setPlayers] = useState<Player[]>([])
   const [myMarked, setMyMarked] = useState<Set<number>>(new Set())
-  const [hasBingo, setHasBingo] = useState(false)
+  const [myBingoCount, setMyBingoCount] = useState(0)
+  const [isGameOver, setIsGameOver] = useState(false)
   const [showCode, setShowCode] = useState(true)
+  // Which player's card to display (null = own card)
+  const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null)
+  const prevCompletedLinesRef = useRef<number>(0)
+
   const gridSize = session.grid_size
   const winMode = session.win_mode as "line" | "full"
   const totalCells = gridSize * gridSize
-  const shuffledItems = shuffleWithSeed(items, session.code).slice(0, totalCells)
+
+  // Each player gets their own shuffled card (session code + player id as seed)
+  const myItems = shuffleWithSeed(items, session.code + playerId).slice(0, totalCells)
   const colorHex = PLAYER_COLORS.find(c => c.id === playerColor)?.hex ?? "#3b82f6"
 
-  // Load initial players
+  // Load initial players + subscribe to realtime
   useEffect(() => {
     const supabase = createClient()
     supabase.from("players").select("*").eq("session_id", session.id).then(({ data }) => {
       if (data) {
         setPlayers(data.map(p => ({ ...p, marked_cells: Array.isArray(p.marked_cells) ? p.marked_cells : [] })))
         const me = data.find(p => p.id === playerId)
-        if (me) setMyMarked(new Set(Array.isArray(me.marked_cells) ? me.marked_cells : []))
+        if (me) {
+          const cells = new Set<number>(Array.isArray(me.marked_cells) ? me.marked_cells : [])
+          setMyMarked(cells)
+          setMyBingoCount(me.bingo_count ?? 0)
+          prevCompletedLinesRef.current = getCompletedLines(cells, gridSize).length
+        }
       }
     })
 
-    // Realtime subscription
     const channel = supabase
       .channel(`session-${session.id}`)
       .on("postgres_changes", {
@@ -92,61 +108,86 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         table: "players",
         filter: `session_id=eq.${session.id}`,
       }, payload => {
+        const updated = payload.new as Player
+        const cells = Array.isArray(updated.marked_cells) ? updated.marked_cells : []
         setPlayers(prev => {
-          const updated = payload.new as Player
-          const cells = Array.isArray(updated.marked_cells) ? updated.marked_cells : []
           const exists = prev.find(p => p.id === updated.id)
-          if (exists) {
-            return prev.map(p => p.id === updated.id ? { ...updated, marked_cells: cells } : p)
-          }
+          if (exists) return prev.map(p => p.id === updated.id ? { ...updated, marked_cells: cells } : p)
           return [...prev, { ...updated, marked_cells: cells }]
         })
       })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [session.id, playerId])
+  }, [session.id, playerId, gridSize])
 
   const toggleCell = useCallback(async (index: number) => {
-    const newMarked = new Set(myMarked)
-    if (newMarked.has(index)) {
-      newMarked.delete(index)
-    } else {
-      newMarked.add(index)
-    }
-    setMyMarked(newMarked)
+    if (isGameOver) return
 
-    const markedArray = Array.from(newMarked)
-    const won = winMode === "full" ? newMarked.size === totalCells : checkBingo(newMarked, gridSize)
-    const prevBingo = hasBingo
+    setMyMarked(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
 
-    if (won && !prevBingo) {
-      setHasBingo(true)
-      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } })
-    } else if (!won) {
-      setHasBingo(false)
-    }
+      const markedArray = Array.from(next)
+      let newBingoCount = myBingoCount
 
-    const supabase = createClient()
-    await supabase.from("players").update({
-      marked_cells: markedArray,
-      total_cells_marked: markedArray.length,
-      bingo_count: won && !prevBingo ? (players.find(p => p.id === playerId)?.bingo_count ?? 0) + 1 : (players.find(p => p.id === playerId)?.bingo_count ?? 0),
-      last_active: new Date().toISOString(),
-    }).eq("id", playerId)
-  }, [myMarked, gridSize, winMode, totalCells, hasBingo, players, playerId])
+      if (winMode === "full") {
+        if (next.size === totalCells && !isGameOver) {
+          setIsGameOver(true)
+          newBingoCount += 1
+          confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
+        }
+      } else {
+        const completedLines = getCompletedLines(next, gridSize)
+        const gained = completedLines.length - prevCompletedLinesRef.current
+        if (gained > 0) {
+          newBingoCount += gained
+          confetti({ particleCount: 100 + gained * 50, spread: 70, origin: { y: 0.6 } })
+        }
+        prevCompletedLinesRef.current = completedLines.length
+        if (next.size === totalCells && !isGameOver) {
+          setIsGameOver(true)
+          confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 } })
+        }
+      }
 
-  // Cell ownership: which player has marked this cell (for coloring)
-  const getCellOwners = (index: number): Player[] => {
-    return players.filter(p => (Array.isArray(p.marked_cells) ? p.marked_cells : []).includes(index))
-  }
+      setMyBingoCount(newBingoCount)
+
+      // Persist to DB
+      const supabase = createClient()
+      supabase.from("players").update({
+        marked_cells: markedArray,
+        total_cells_marked: markedArray.length,
+        bingo_count: newBingoCount,
+        last_active: new Date().toISOString(),
+      }).eq("id", playerId).then(() => {})
+
+      return next
+    })
+  }, [isGameOver, myBingoCount, gridSize, winMode, totalCells, playerId])
 
   const myPlayer = players.find(p => p.id === playerId)
   const otherPlayers = players.filter(p => p.id !== playerId)
 
+  // Card being viewed (own or another player's)
+  const viewingPlayer = viewingPlayerId ? players.find(p => p.id === viewingPlayerId) : null
+  const viewingItems = viewingPlayer
+    ? shuffleWithSeed(items, session.code + viewingPlayer.id).slice(0, totalCells)
+    : myItems
+  const viewingMarked = viewingPlayer
+    ? new Set<number>(viewingPlayer.marked_cells)
+    : myMarked
+  const viewingColor = viewingPlayer
+    ? PLAYER_COLORS.find(c => c.id === viewingPlayer.color)?.hex ?? "#888"
+    : colorHex
+  const viewingCompletedCells = winMode === "line"
+    ? new Set(getCompletedLines(viewingMarked, gridSize).flat())
+    : new Set<number>()
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Header bar */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <button onClick={onBack} className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -161,47 +202,84 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         </button>
       </div>
 
-      {/* Share code banner */}
+      {/* Code banner */}
       {showCode && (
         <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Spielcode zum Teilen</p>
             <p className="font-mono text-2xl font-bold tracking-widest text-primary">{session.code}</p>
           </div>
-          <button
-            onClick={() => navigator.clipboard.writeText(session.code)}
-            className="text-xs px-3 py-2 rounded-lg bg-muted hover:bg-muted/70 transition-colors"
-          >
+          <button onClick={() => navigator.clipboard.writeText(session.code)} className="text-xs px-3 py-2 rounded-lg bg-muted hover:bg-muted/70 transition-colors">
             Kopieren
           </button>
         </div>
       )}
 
-      {/* Players bar */}
-      {players.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {players.map(p => {
-            const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
-            const isMe = p.id === playerId
-            return (
-              <div key={p.id} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border", isMe && "border-2")} style={{ borderColor: hex, backgroundColor: `${hex}18` }}>
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
-                <span className="font-medium text-foreground">{p.name}{isMe ? " (du)" : ""}</span>
-                {p.bingo_count > 0 && (
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: hex }}>
-                    {p.bingo_count}x BINGO
-                  </span>
-                )}
-              </div>
-            )
-          })}
+      {/* Players + card switcher */}
+      <div className="flex flex-wrap gap-2">
+        {/* Own card button */}
+        <button
+          onClick={() => setViewingPlayerId(null)}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border-2 transition-all",
+            viewingPlayerId === null ? "shadow-md scale-105" : "opacity-70 hover:opacity-100"
+          )}
+          style={{ borderColor: colorHex, backgroundColor: viewingPlayerId === null ? `${colorHex}30` : `${colorHex}10` }}
+        >
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colorHex }} />
+          <span className="font-medium text-foreground">{playerName} (du)</span>
+          {myBingoCount > 0 && (
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: colorHex }}>
+              {myBingoCount}x
+            </span>
+          )}
+        </button>
+
+        {/* Other players' card buttons */}
+        {otherPlayers.map(p => {
+          const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
+          const isViewing = viewingPlayerId === p.id
+          return (
+            <button
+              key={p.id}
+              onClick={() => setViewingPlayerId(isViewing ? null : p.id)}
+              title="Karte ansehen"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border-2 transition-all",
+                isViewing ? "shadow-md scale-105" : "opacity-70 hover:opacity-100"
+              )}
+              style={{ borderColor: hex, backgroundColor: isViewing ? `${hex}30` : `${hex}10` }}
+            >
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: hex }} />
+              <span className="font-medium text-foreground">{p.name}</span>
+              {p.bingo_count > 0 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: hex }}>
+                  {p.bingo_count}x
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Viewing indicator */}
+      {viewingPlayer && (
+        <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground text-center">
+          Du siehst die Karte von <span className="font-semibold text-foreground">{viewingPlayer.name}</span> (nur lesen)
         </div>
       )}
 
-      {/* Bingo announcement */}
-      {hasBingo && (
-        <div className="text-center py-2">
-          <span className="text-3xl font-bold text-primary animate-bounce inline-block">BINGO!</span>
+      {/* Bingo status */}
+      {(myBingoCount > 0 || isGameOver) && !viewingPlayer && (
+        <div className="flex items-center justify-center gap-4">
+          {myBingoCount > 0 && (
+            <div className="px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
+              <span className="text-primary font-bold text-lg">{myBingoCount}x BINGO</span>
+            </div>
+          )}
+          {isGameOver && (
+            <div className="text-lg font-bold text-foreground animate-bounce">Karte voll!</div>
+          )}
         </div>
       )}
 
@@ -210,36 +288,36 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         className="grid gap-1.5 w-full max-w-2xl mx-auto"
         style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
       >
-        {shuffledItems.map((item, index) => {
-          const isMyMark = myMarked.has(index)
-          const owners = getCellOwners(index)
-          const otherOwners = owners.filter(p => p.id !== playerId)
-          const ownerHexes = owners.map(p => PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888")
+        {viewingItems.map((item, index) => {
+          const isMarked = viewingMarked.has(index)
+          const isCompleted = viewingCompletedCells.has(index)
+          const isReadOnly = !!viewingPlayer
 
           return (
             <button
-              key={item.id}
-              onClick={() => toggleCell(index)}
+              key={`${item.id}-${index}`}
+              onClick={() => !isReadOnly && toggleCell(index)}
+              disabled={isReadOnly || isGameOver}
               className={cn(
                 "aspect-square p-1.5 rounded-lg border-2 transition-all duration-200",
-                "flex flex-col items-center justify-center text-center relative overflow-hidden",
-                "text-xs font-medium leading-tight hover:scale-105 hover:shadow-md",
-                isMyMark
-                  ? "border-transparent text-white"
-                  : otherOwners.length > 0
-                    ? "border-transparent text-foreground"
+                "flex items-center justify-center text-center",
+                "text-xs font-medium leading-tight",
+                !isReadOnly && !isGameOver && "hover:scale-105 hover:shadow-md",
+                isReadOnly && "cursor-default",
+                isCompleted
+                  ? "ring-2 ring-offset-1 border-transparent text-white"
+                  : isMarked
+                    ? "border-transparent text-white opacity-80"
                     : "border-border bg-card text-card-foreground hover:border-primary/50"
               )}
-              style={isMyMark ? { backgroundColor: colorHex } : otherOwners.length > 0 ? { backgroundColor: `${PLAYER_COLORS.find(c => c.id === otherOwners[0].color)?.hex}30`, borderColor: PLAYER_COLORS.find(c => c.id === otherOwners[0].color)?.hex } : {}}
+              style={
+                isCompleted
+                  ? { backgroundColor: viewingColor, ringColor: viewingColor }
+                  : isMarked
+                    ? { backgroundColor: viewingColor }
+                    : {}
+              }
             >
-              {/* Multi-owner dots */}
-              {owners.length > 1 && (
-                <div className="absolute top-1 right-1 flex gap-0.5">
-                  {ownerHexes.slice(0, 3).map((hex, i) => (
-                    <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hex }} />
-                  ))}
-                </div>
-              )}
               <span className="line-clamp-4">{item.text}</span>
             </button>
           )
@@ -251,20 +329,26 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         <div className="rounded-xl border border-border bg-card p-4 mt-2">
           <h3 className="text-sm font-semibold text-foreground mb-3">Punktestand</h3>
           <div className="flex flex-col gap-2">
-            {[...players].sort((a, b) => b.bingo_count - a.bingo_count || b.total_cells_marked - a.total_cells_marked).map(p => {
-              const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
-              const isMe = p.id === playerId
-              return (
-                <div key={p.id} className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
-                  <span className={cn("text-sm flex-1", isMe && "font-semibold")}>{p.name}{isMe ? " (du)" : ""}</span>
-                  <span className="text-xs text-muted-foreground">{(Array.isArray(p.marked_cells) ? p.marked_cells : []).length} Felder</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white min-w-[60px] text-center" style={{ backgroundColor: hex }}>
-                    {p.bingo_count}x Bingo
-                  </span>
-                </div>
-              )
-            })}
+            {[...players]
+              .sort((a, b) => b.bingo_count - a.bingo_count || b.total_cells_marked - a.total_cells_marked)
+              .map(p => {
+                const hex = PLAYER_COLORS.find(c => c.id === p.color)?.hex ?? "#888"
+                const isMe = p.id === playerId
+                const count = isMe ? myBingoCount : p.bingo_count
+                const marked = isMe ? myMarked.size : (Array.isArray(p.marked_cells) ? p.marked_cells : []).length
+                return (
+                  <div key={p.id} className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
+                    <span className={cn("text-sm flex-1", isMe && "font-semibold")}>
+                      {p.name}{isMe ? " (du)" : ""}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{marked}/{totalCells} Felder</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white min-w-[60px] text-center" style={{ backgroundColor: hex }}>
+                      {count}x Bingo
+                    </span>
+                  </div>
+                )
+              })}
           </div>
         </div>
       )}
