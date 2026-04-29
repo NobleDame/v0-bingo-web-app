@@ -15,8 +15,16 @@ interface BingoCardProps {
   winMode?: "line" | "full"
   /** Called once when the game-ending condition is first met */
   onGameOver?: () => void
-  /** External game-over flag (e.g. another multiplayer player already won) */
+  /** External game-over flag (another player already won) */
   externalGameOver?: boolean
+  /** Multiplayer: override the toggle handler (DB sync) */
+  onCellToggle?: (index: number) => void
+  /** Multiplayer: read-only view of another player's card */
+  externalMarked?: Set<number>
+  /** Multiplayer: disable all interaction */
+  readOnly?: boolean
+  /** Hex color used for marked/completed cells */
+  playerColor?: string
 }
 
 export function getCompletedLines(selected: Set<number>, gridSize: number): number[][] {
@@ -36,7 +44,10 @@ export function getCompletedLines(selected: Set<number>, gridSize: number): numb
   return lines
 }
 
-export function BingoCard({ items, gridSize, winMode = "line", onGameOver, externalGameOver = false }: BingoCardProps) {
+export function BingoCard({
+  items, gridSize, winMode = "line", onGameOver,
+  externalGameOver = false, onCellToggle, externalMarked, readOnly = false, playerColor,
+}: BingoCardProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bingoCount, setBingoCount] = useState(0)
   const [isGameOver, setIsGameOver] = useState(false)
@@ -45,15 +56,16 @@ export function BingoCard({ items, gridSize, winMode = "line", onGameOver, exter
 
   const totalCells = gridSize * gridSize
 
-  // Trigger game-over from external source (another player won in multiplayer)
-  useEffect(() => {
-    if (externalGameOver && !isGameOver) {
-      setIsGameOver(true)
-    }
-  }, [externalGameOver, isGameOver])
+  // In read-only mode, use the external marked set; otherwise local state
+  const activeSelected = externalMarked ?? selected
 
   useEffect(() => {
-    if (isGameOver) return
+    if (externalGameOver && !isGameOver) setIsGameOver(true)
+  }, [externalGameOver, isGameOver])
+
+  // Win-condition check (only for local interactive card)
+  useEffect(() => {
+    if (readOnly || externalMarked || isGameOver) return
 
     if (winMode === "full") {
       if (selected.size === totalCells) {
@@ -66,12 +78,9 @@ export function BingoCard({ items, gridSize, winMode = "line", onGameOver, exter
       const completedLines = getCompletedLines(selected, gridSize)
       const newCount = completedLines.length
       const gained = newCount - prevCompletedRef.current
-
       if (gained > 0) {
         setBingoCount(prev => prev + gained)
         confetti({ particleCount: 100 + gained * 50, spread: 70, origin: { y: 0.6 } })
-
-        // In line-mode: first bingo ends the game
         if (!gameOverFiredRef.current) {
           gameOverFiredRef.current = true
           setIsGameOver(true)
@@ -80,16 +89,21 @@ export function BingoCard({ items, gridSize, winMode = "line", onGameOver, exter
       }
       prevCompletedRef.current = newCount
     }
-  }, [selected, gridSize, totalCells, winMode, isGameOver, onGameOver])
+  }, [selected, gridSize, totalCells, winMode, isGameOver, onGameOver, readOnly, externalMarked])
 
-  const toggleCell = (index: number) => {
-    if (isGameOver || externalGameOver) return
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
-    })
+  const handleToggle = (index: number) => {
+    if (readOnly || isGameOver || externalGameOver) return
+    if (onCellToggle) {
+      // Multiplayer: let parent handle DB + state
+      onCellToggle(index)
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) next.delete(index)
+        else next.add(index)
+        return next
+      })
+    }
   }
 
   const resetGame = () => {
@@ -101,48 +115,66 @@ export function BingoCard({ items, gridSize, winMode = "line", onGameOver, exter
   }
 
   const completedCells = winMode === "line"
-    ? new Set(getCompletedLines(selected, gridSize).flat())
+    ? new Set(getCompletedLines(activeSelected, gridSize).flat())
     : new Set<number>()
+
+  const markedStyle = (index: number) => {
+    const isCompleted = completedCells.has(index)
+    const isMarked = activeSelected.has(index)
+    if (!isMarked && !isCompleted) return {}
+    if (playerColor) return { backgroundColor: playerColor, borderColor: playerColor }
+    return {}
+  }
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Status bar */}
-      <div className="flex items-center gap-4">
-        {bingoCount > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
-            <span className="text-primary font-bold text-lg">{bingoCount}x BINGO</span>
-          </div>
-        )}
-        {isGameOver && (
-          <div className="text-lg font-bold text-foreground animate-bounce">
-            {externalGameOver ? "Spiel vorbei!" : winMode === "line" ? "BINGO! Spiel vorbei!" : "Karte voll!"}
-          </div>
-        )}
-      </div>
+      {/* Status bar — only for own interactive card */}
+      {!readOnly && (
+        <div className="flex items-center gap-4">
+          {bingoCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
+              <span className="text-primary font-bold text-lg">{bingoCount}x BINGO</span>
+            </div>
+          )}
+          {isGameOver && (
+            <div className="text-lg font-bold text-foreground animate-bounce">
+              {externalGameOver ? "Spiel vorbei!" : winMode === "line" ? "BINGO! Spiel vorbei!" : "Karte voll!"}
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         className="grid gap-2 w-full max-w-2xl"
         style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
       >
         {items.slice(0, totalCells).map((item, index) => {
-          const isSelected = selected.has(index)
+          const isMarked = activeSelected.has(index)
           const isCompleted = completedCells.has(index)
+          const customStyle = markedStyle(index)
+          const hasCustomColor = !!playerColor
+
           return (
             <button
-              key={item.id}
-              onClick={() => toggleCell(index)}
-              disabled={isGameOver}
+              key={item.id + index}
+              onClick={() => handleToggle(index)}
+              disabled={readOnly || isGameOver || externalGameOver}
               className={cn(
                 "aspect-square p-2 rounded-lg border-2 transition-all duration-200",
                 "flex items-center justify-center text-center",
                 "text-xs sm:text-sm font-medium leading-tight",
-                "hover:scale-105 hover:shadow-md disabled:cursor-default disabled:hover:scale-100",
-                isCompleted
+                !readOnly && !isGameOver && "hover:scale-105 hover:shadow-md",
+                "disabled:cursor-default disabled:hover:scale-100",
+                isCompleted && !hasCustomColor
                   ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary/40 ring-offset-1"
-                  : isSelected
+                  : isMarked && !hasCustomColor
                     ? "bg-primary/70 text-primary-foreground border-primary/70"
-                    : "bg-card text-card-foreground border-border hover:border-primary/50"
+                    : !isMarked
+                      ? "bg-card text-card-foreground border-border hover:border-primary/50"
+                      : "",
+                (isMarked || isCompleted) && hasCustomColor ? "text-white" : ""
               )}
+              style={customStyle}
             >
               <span className="line-clamp-4">{item.text}</span>
             </button>
@@ -150,12 +182,14 @@ export function BingoCard({ items, gridSize, winMode = "line", onGameOver, exter
         })}
       </div>
 
-      <button
-        onClick={resetGame}
-        className="px-6 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-      >
-        Neues Spiel
-      </button>
+      {!readOnly && !onCellToggle && (
+        <button
+          onClick={resetGame}
+          className="px-6 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+        >
+          Neues Spiel
+        </button>
+      )}
     </div>
   )
 }

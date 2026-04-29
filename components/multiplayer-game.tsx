@@ -6,7 +6,7 @@ import { PLAYER_COLORS } from "./multiplayer-lobby"
 import type { Session } from "./multiplayer-lobby"
 import confetti from "canvas-confetti"
 import { cn } from "@/lib/utils"
-import { getCompletedLines } from "./bingo-card"
+import { BingoCard } from "./bingo-card"
 
 interface BingoItem {
   id: string
@@ -94,8 +94,15 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         table: "players",
         filter: `session_id=eq.${session.id}`,
       }, payload => {
-        const updated = payload.new as Player
+        const updated = payload.new as Player & { is_winner?: boolean }
         const cells = Array.isArray(updated.marked_cells) ? updated.marked_cells : []
+
+        // If another player just won, end the game for everyone
+        if (updated.is_winner && updated.id !== playerId) {
+          setIsGameOver(true)
+          setWinnerName(updated.name)
+        }
+
         setPlayers(prev => {
           const exists = prev.find(p => p.id === updated.id)
           if (exists) return prev.map(p => p.id === updated.id ? { ...updated, marked_cells: cells } : p)
@@ -157,23 +164,8 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
     })
   }, [isGameOver, myBingoCount, gridSize, winMode, totalCells, playerId])
 
-  const myPlayer = players.find(p => p.id === playerId)
   const otherPlayers = players.filter(p => p.id !== playerId)
-
-  // Card being viewed (own or another player's)
   const viewingPlayer = viewingPlayerId ? players.find(p => p.id === viewingPlayerId) : null
-  const viewingItems = viewingPlayer
-    ? shuffleWithSeed(items, session.code + viewingPlayer.id).slice(0, totalCells)
-    : myItems
-  const viewingMarked = viewingPlayer
-    ? new Set<number>(viewingPlayer.marked_cells)
-    : myMarked
-  const viewingColor = viewingPlayer
-    ? PLAYER_COLORS.find(c => c.id === viewingPlayer.color)?.hex ?? "#888"
-    : colorHex
-  const viewingCompletedCells = winMode === "line"
-    ? new Set(getCompletedLines(viewingMarked, gridSize).flat())
-    : new Set<number>()
 
   return (
     <div className="flex flex-col gap-4">
@@ -259,60 +251,43 @@ export function MultiplayerGame({ session, playerId, playerName, playerColor, it
         </div>
       )}
 
-      {/* Bingo status */}
-      {(myBingoCount > 0 || isGameOver) && !viewingPlayer && (
-        <div className="flex items-center justify-center gap-4">
-          {myBingoCount > 0 && (
-            <div className="px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
-              <span className="text-primary font-bold text-lg">{myBingoCount}x BINGO</span>
-            </div>
-          )}
-          {isGameOver && (
-            <div className="text-lg font-bold text-foreground animate-bounce">Karte voll!</div>
-          )}
+      {/* Winner banner */}
+      {isGameOver && winnerName && (
+        <div className={cn(
+          "rounded-xl border-2 px-4 py-3 text-center",
+          winnerName === playerName
+            ? "border-primary bg-primary/10 text-primary"
+            : "border-border bg-muted text-foreground"
+        )}>
+          <span className="font-bold text-lg">
+            {winnerName === playerName ? "Du hast gewonnen!" : `${winnerName} hat gewonnen!`}
+          </span>
+          <p className="text-xs mt-0.5 text-muted-foreground">Spiel vorbei</p>
         </div>
       )}
 
-      {/* Bingo grid */}
-      <div
-        className="grid gap-1.5 w-full max-w-2xl mx-auto"
-        style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-      >
-        {viewingItems.map((item, index) => {
-          const isMarked = viewingMarked.has(index)
-          const isCompleted = viewingCompletedCells.has(index)
-          const isReadOnly = !!viewingPlayer
-
-          return (
-            <button
-              key={`${item.id}-${index}`}
-              onClick={() => !isReadOnly && toggleCell(index)}
-              disabled={isReadOnly || isGameOver}
-              className={cn(
-                "aspect-square p-1.5 rounded-lg border-2 transition-all duration-200",
-                "flex items-center justify-center text-center",
-                "text-xs font-medium leading-tight",
-                !isReadOnly && !isGameOver && "hover:scale-105 hover:shadow-md",
-                isReadOnly && "cursor-default",
-                isCompleted
-                  ? "ring-2 ring-offset-1 border-transparent text-white"
-                  : isMarked
-                    ? "border-transparent text-white opacity-80"
-                    : "border-border bg-card text-card-foreground hover:border-primary/50"
-              )}
-              style={
-                isCompleted
-                  ? { backgroundColor: viewingColor, ringColor: viewingColor }
-                  : isMarked
-                    ? { backgroundColor: viewingColor }
-                    : {}
-              }
-            >
-              <span className="line-clamp-4">{item.text}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Bingo card — own (interactive) or other player's (read-only) */}
+      {viewingPlayer ? (
+        <BingoCard
+          items={shuffleWithSeed(items, session.code + viewingPlayer.id).slice(0, totalCells)}
+          gridSize={gridSize}
+          winMode={winMode}
+          playerColor={PLAYER_COLORS.find(c => c.id === viewingPlayer.color)?.hex}
+          externalMarked={new Set<number>(viewingPlayer.marked_cells)}
+          readOnly
+          externalGameOver={isGameOver}
+        />
+      ) : (
+        <BingoCard
+          items={myItems}
+          gridSize={gridSize}
+          winMode={winMode}
+          playerColor={colorHex}
+          onCellToggle={toggleCell}
+          onGameOver={handleMyGameOver}
+          externalGameOver={isGameOver && winnerName !== playerName}
+        />
+      )}
 
       {/* Scoreboard */}
       {players.length > 1 && (
