@@ -1,23 +1,10 @@
 "use client"
 
-interface Teacher {
+export interface Teacher {
   id: string
   name: string
   category: string
-}
-
-const teachers: Teacher[] = [
-  { id: "graw", name: "Herr Graw", category: "graw" },
-  { id: "hiss", name: "Herr Hiss", category: "hiss" },
-  { id: "springer", name: "Herr Springer", category: "springer" },
-  { id: "wolff", name: "Frau Dr Wolff", category: "wolff" },
-]
-
-const subjectsByTeacher: Record<string, string[]> = {
-  graw: ["GK", "Geschichte"],
-  hiss: ["Deutsch"],
-  springer: ["Physik", "Kunst"],
-  wolff: ["Bio"],
+  subjects: { id: string; name: string; slug: string }[]
 }
 
 interface TeacherSelectorProps {
@@ -34,7 +21,7 @@ export function TeacherSelector({ teachers, onSelect }: TeacherSelectorProps) {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-2xl">
         {teachers.map((teacher) => (
           <button
             key={teacher.id}
@@ -43,18 +30,18 @@ export function TeacherSelector({ teachers, onSelect }: TeacherSelectorProps) {
           >
             <div className="flex flex-col items-center gap-3">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                {teacher.name.split(" ")[1]?.[0] || "?"}
+                {teacher.name.split(" ").pop()?.[0] ?? "?"}
               </div>
               <span className="text-lg font-medium text-foreground">
                 {teacher.name}
               </span>
               <div className="flex flex-wrap gap-1 justify-center">
-                {(subjectsByTeacher[teacher.category] || []).map((subject) => (
+                {teacher.subjects.map((subject) => (
                   <span
-                    key={subject}
+                    key={subject.id}
                     className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium group-hover:bg-primary/10 group-hover:text-primary transition-colors"
                   >
-                    {subject}
+                    {subject.name}
                   </span>
                 ))}
               </div>
