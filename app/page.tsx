@@ -14,10 +14,15 @@ export default function Home() {
         <BingoApp />
       </main>
 
-      <footer className="border-t border-border py-5 text-center text-xs text-muted-foreground">
-        Lehrer-Bingo &mdash;{" "}
+      <footer className="border-t border-border py-5 text-center text-xs text-muted-foreground flex items-center justify-center gap-3">
+        <span>Lehrer-Bingo</span>
+        <span>&mdash;</span>
         <Link href="/regeln" className="underline underline-offset-2 hover:text-foreground transition-colors">
           Spielregeln
+        </Link>
+        <span>&mdash;</span>
+        <Link href="/dev" className="underline underline-offset-2 hover:text-foreground transition-colors">
+          Dev
         </Link>
       </footer>
     </div>
